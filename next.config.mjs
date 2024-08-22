@@ -6,6 +6,7 @@ const nextConfig = {
 
   // Indicate that these packages should not be bundled by webpack
   experimental: {
+    webpackBuildWorker: false, // https://github.com/vercel/next.js/issues/65350
     serverComponentsExternalPackages: ["sharp", "onnxruntime-node"],
   },
 };

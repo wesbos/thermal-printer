@@ -1,60 +1,6 @@
+import { takeScreenshot } from '@/actions/screenshot';
+import { getIssueTags, SentryIssue } from '@/lib/sentry';
 import ms from 'ms';
-export interface SentryIssue {
-  id: string;
-  shareId: string | null;
-  shortId: string;
-  title: string;
-  culprit: string;
-  permalink: string;
-  logger: string | null;
-  level: string;
-  status: string;
-  statusDetails: {};
-  substatus: string;
-  isPublic: boolean;
-  platform: string;
-  project: {
-    id: string;
-    name: string;
-    slug: string;
-    platform: string;
-  };
-  type: string;
-  metadata: {
-    value: string;
-    type: string;
-    filename: string;
-    function: string;
-    display_title_with_tree_label: boolean;
-    in_app_frame_mix: string;
-    sdk: any;
-    severity: number;
-    severity_reason: string;
-    initial_priority: number;
-  };
-  numComments: number;
-  assignedTo: string | null;
-  isBookmarked: boolean;
-  isSubscribed: boolean;
-  subscriptionDetails: any | null;
-  hasSeen: boolean;
-  annotations: any[];
-  issueType: string;
-  issueCategory: string;
-  priority: string;
-  priorityLockedAt: string | null;
-  isUnhandled: boolean;
-  count: string;
-  userCount: number;
-  firstSeen: string;
-  lastSeen: string;
-  stats: {
-    "24h": Stat[];
-    "14d": Stat[];
-  };
-}
-
-type Stat = [timestamp: number, count: number];
 
 function Stats({ stats, label }: { stats: Stat[], label: string }) {
   const statsArray = stats;
@@ -84,8 +30,7 @@ export async function SentryIssue({ issue } : { issue: SentryIssue }) {
   const firstSeen = new Date(issue.firstSeen);
   const firstSeenAgo = ms(Date.now() - firstSeen.getTime());
   const lastSeen = new Date(issue.lastSeen);
-  const lastSeenAgo = ms(Date.now() - lastSeen.getTime());
-  console.log(issue);
+  const lastSeenAgo = ms(Date.now() - (lastSeen.getTime() || Date.now()));
   return (
     <div
       className="w-[600px] rounded-xl grid gap-5 issue bg-white wrap pr-5"
@@ -94,23 +39,25 @@ export async function SentryIssue({ issue } : { issue: SentryIssue }) {
         overflowWrap: "anywhere",
       }}
     >
-      {/* <a href={`/sentry/${issue.id}`}>{issue.id}</a> */}
-      <div className="grid grid-cols-2 place-content-center items-center">
-        <img src="/sentry.svg" alt="Sentry" className="w-[200px]" />
-        <p className="text-xxs text-right">{issue.shortId}</p>
-      </div>
+      <form action={takeScreenshot}>
+        <div className="grid grid-cols-2 place-content-center items-center">
+          <button type="submit">
+            <img src="/sentry.svg" alt="Sentry" className="w-[200px]" />
+          </button>
+          <p className="text-xxs text-right">{issue.shortId}</p>
+        </div>
+      </form>
       <div className="border-4 border-black">
         <h1 className="p-2 bg-black text-white">
           ⚠️ {issue.metadata.type || issue.metadata.title}
         </h1>
         <p className="p-2">{issue.metadata.value}</p>
       </div>
-      ORG: PRoject:
       <p>{issue.culprit}</p>
-      <p>
-        🕧 Last Seen {lastSeenAgo}
-        First Seen {firstSeenAgo}
-      </p>
+      <div className="grid grid-cols-2">
+        <p>⏲ Last Seen {lastSeenAgo}</p>
+        <p>⏲ First Seen {firstSeenAgo}</p>
+      </div>
       <Stats stats={issue.stats["24h"]} label="24h" />
       <Stats stats={issue.stats["30d"]} label="30d" />
       <div className="flex gap-2 flex-wrap">
@@ -146,6 +93,31 @@ export async function SentryIssue({ issue } : { issue: SentryIssue }) {
           <strong>level</strong>
           <PillContents>{issue.level}</PillContents>
         </Pill>
+      </div>
+      <IssueTags tagKey="browser.name" issueId={issue.id} />
+      <IssueTags tagKey="device.family" issueId={issue.id} />
+      <IssueTags tagKey="os" issueId={issue.id} />
+      <p className="font-black text-[93px] text-center">GOOD LUCK</p>
+      <p className="font-black text-[95px] text-center">HAVE FUN</p>
+    </div>
+  );
+}
+
+async function IssueTags({ tagKey, issueId }: { tagKey: string, issueId: string }) {
+  const issueTags = await getIssueTags({ tagKey, issueId });
+  if(!issueTags?.topValues) return null;
+  return (
+    <div className="border-2 border-black text-md rounded-lg p-1">
+      <h2 className="rounded-md w-max bg-black text-white relative mt-[-0.5lh] px-[10px] ml-1 text-xs leading-[1.2]">
+        {issueTags.name}
+      </h2>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {issueTags.topValues.map((tag) => (
+          <p key={tag.key} className="text-[20px] leading-tight border-2 border-black overflow-hidden">
+            <strong>{tag.name} </strong>
+            <span className='bg-black text-white p-1'>{tag.count}</span>
+          </p>
+        ))}
       </div>
     </div>
   );

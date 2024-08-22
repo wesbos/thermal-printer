@@ -11,23 +11,25 @@ const printData = Buffer.from([
 const PORT = 9100; // Most printers use port 9100
 const HOST = '192.168.1.87'; // The IP address of the printer, I got this by holding the feed button on the printer while turning it on
 
+
 const printerClientSingleton = () => {
   console.log('Creating new socket...');
   return new net.Socket();
 }
 
+
 // This singleton pattern is used to ensure that the client is only created once and reused across hot reloads in Next.js
 export const client = globalThis.printerClientGlobal ?? printerClientSingleton();
-if (process.env.NODE_ENV !== 'production') globalThis.printerClientGlobal = client
+globalThis.printerClientGlobal = client;
 
-
-console.log('[🧾 THERMAL] Checking if printer is connected...', client.readyState);
-if (client.readyState !== 'open') {
-  console.log('[🧾 THERMAL] Connecting for the first time!');
+if (!globalThis.printerConnected) {
+  console.log('[🧾 THERMAL] Connecting to printer for the first time');
   client.connect(PORT, HOST, () => {
+    globalThis.printerConnected = true;
     console.log('[🧾 THERMAL] Connected to printer');
   });
 }
+
 
 client.on('data', (data) => {
   console.log('[🧾 THERMAL] Received:', data.toString('hex'));
@@ -48,6 +50,7 @@ const socketEvents = ['close',
   'drain',
   'end',
   'lookup',
+  'connect',
   'ready',
   'timeout'];
 
@@ -60,6 +63,7 @@ socketEvents.forEach((event) => {
 
 declare const globalThis: {
   printerClientGlobal: ReturnType<typeof printerClientSingleton>;
+  printerConnected: boolean;
 } & typeof global;
 
 
